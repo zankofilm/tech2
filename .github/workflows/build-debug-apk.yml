@@ -1,0 +1,52 @@
+name: Build teacher Android APK (test)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          # Google removed the obsolete SDK package named 'tools'.
+          # Installing platform-tools explicitly avoids the v3 default.
+          packages: 'platform-tools'
+
+      - name: Install SDK packages
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+
+      # No Gradle wrapper JAR is committed: GitHub installs pinned Gradle directly.
+      - name: Install Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Compile test Android APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Publish downloadable debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Madreseyar-Teacher-A02-FIX01-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
